@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viaje de Fe - Multijugador</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primario: #005A94;
+            --color-secundario: #EABC68;
+            --color-fondo: #F0F4F8;
+            --color-texto: #333333;
+            --player-1-color: #e74c3c;
+            --player-2-color: #3498db;
+            --player-3-color: #2ecc71;
+            --player-4-color: #f1c40f;
+        }
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: var(--color-fondo);
+            color: var(--color-texto);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            justify-content: center;
+        }
+        .game-container {
+            flex: 3;
+            min-width: 500px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .players-container {
+            flex: 1;
+            min-width: 250px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 { font-family: 'Cinzel', serif; color: var(--color-primario); }
+        h1 { font-size: 2.8em; margin-bottom: 10px; }
+        h2 { font-size: 1.8em; margin-bottom: 15px; border-bottom: 2px solid var(--color-secundario); padding-bottom: 10px; }
+        #welcome-message { font-size: 1.2em; color: var(--color-primario); margin-bottom: 20px; font-weight: bold; min-height: 25px; }
+        .game-board { position: relative; width: 100%; height: 400px; margin: 20px 0; border: 2px dashed var(--color-secundario); border-radius: 15px; background-image: url('https://www.transparenttextures.com/patterns/light-paper-fibers.png'); }
+        .board-space { position: absolute; width: 60px; height: 60px; background-color: var(--color-primario); color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 10px; text-align: center; padding: 5px; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-weight: bold; }
+        .milestone { background-color: var(--color-secundario); color: var(--color-texto); transform: scale(1.2); }
+        .player-token { position: absolute; width: 25px; height: 25px; border: 2px solid white; border-radius: 50%; transition: all 0.5s ease-in-out; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        .controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 20px; }
+        #roll-button, #restart-button { padding: 15px 30px; font-size: 1.2em; font-family: 'Cinzel', serif; color: white; background-color: var(--color-primario); border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease; }
+        #roll-button:hover, #restart-button:hover { background-color: #00416A; transform: translateY(-2px); }
+        #roll-button:disabled { background-color: #95a5a6; cursor: not-allowed; transform: translateY(0); }
+        #dice-result { font-size: 1.5em; font-weight: bold; min-width: 150px; }
+        #event-card, #setup-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 100; transition: opacity 0.3s ease; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; text-align: center; }
+        #question-text { font-size: 1.4em; margin-bottom: 20px; }
+        .options-container button { display: block; width: 100%; padding: 15px; margin: 10px 0; font-size: 1em; border: 2px solid var(--color-primario); background-color: white; color: var(--color-primario); border-radius: 8px; cursor: pointer; transition: background-color 0.3s, color 0.3s; }
+        .options-container button:hover:not(:disabled) { background-color: var(--color-primario); color: white; }
+        .options-container button.correct { background-color: #27ae60; border-color: #27ae60; color: white; }
+        .options-container button.incorrect { background-color: #c0392b; border-color: #c0392b; color: white; }
+        .options-container button:disabled { cursor: not-allowed; opacity: 0.7; }
+        #feedback-text { margin-top: 20px; font-size: 1.2em; font-weight: bold; min-height: 25px; }
+        .player-info-list li { list-style: none; padding: 10px; margin-bottom: 10px; border-radius: 8px; display: flex; align-items: center; transition: all 0.3s ease; }
+        .player-info-list li.active { background-color: var(--color-secundario); transform: scale(1.05); }
+        .player-info-list .token-icon { width: 20px; height: 20px; border-radius: 50%; margin-right: 15px; border: 2px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .player-info-list .player-name { font-weight: bold; flex-grow: 1; }
+        .player-info-list .player-pos { font-family: 'Cinzel'; font-size: 0.9em; }
+        #player-inputs { margin-bottom: 20px; }
+        #player-inputs input { display: block; width: calc(100% - 20px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        #add-player-button, #start-game-button { margin-right: 10px; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="game-container">
+            <h1>Viaje de Fe</h1>
+            <div id="welcome-message"></div>
+            <div class="game-board" id="game-board"></div>
+            <div class="controls">
+                <button id="roll-button">Lanzar Dado</button>
+                <div id="dice-result"></div>
+                <button id="restart-button" class="hidden">Jugar de Nuevo</button>
+            </div>
+        </div>
+        <div class="players-container">
+            <h2>Jugadores</h2>
+            <ul class="player-info-list" id="player-info-list"></ul>
+        </div>
+    </div>
+
+    <!-- Pantalla de Configuración -->
+    <div id="setup-screen">
+        <div class="modal-content">
+            <h2>Configurar Jugadores</h2>
+            <p>Añade de 2 a 4 jugadores para empezar.</p>
+            <div id="player-inputs">
+                <input type="text" placeholder="Nombre Jugador 1" value="Jugador 1">
+                <input type="text" placeholder="Nombre Jugador 2" value="Jugador 2">
+            </div>
+            <button id="add-player-button">Añadir Jugador</button>
+            <button id="start-game-button">Comenzar Juego</button>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Pregunta (Modal) -->
+    <div id="event-card" class="hidden">
+        <div class="modal-content">
+            <p id="question-text"></p>
+            <div id="options-container"></div>
+            <p id="feedback-text"></p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const gameData = [
+            { type: 'milestone', name: 'Vida Premortal', question: 'Elegiste seguir el Plan de Dios. ¡Comienza tu viaje!' },
+            { type: 'question', question: '¿Cuál es el primer principio del Evangelio?', options: ['Fe', 'Arrepentimiento', 'Oración'], answer: 'Fe' },
+            { type: 'question', question: '¿En qué sección de Doctrina y Convenios se encuentra la Palabra de Sabiduría?', options: ['Sección 89', 'Sección 76', 'Sección 132'], answer: 'Sección 89' },
+            { type: 'rest', name: 'Familia', question: 'La familia es central en el Plan del Creador. Tomas un descanso con tus seres queridos.' },
+            { type: 'question', question: '¿Qué libro es "Otro Testamento de Jesucristo"?', options: ['La Biblia', 'El Libro de Mormón', 'Doctrina y Convenios'], answer: 'El Libro de Mormón' },
+            { type: 'question', question: '¿Qué evento marca el comienzo de la Restauración del Evangelio en los últimos días?', options: ['La publicación del Libro de Mormón', 'La Primera Visión', 'La organización de la Iglesia'], answer: 'La Primera Visión'},
+            { type: 'milestone', name: 'Bautismo', question: 'Haces tu primer convenio de guardar los mandamientos de Dios.' },
+            { type: 'question', question: '¿Quién restauró el Sacerdocio Aarónico a José Smith y Oliver Cowdery?', options: ['Juan el Bautista', 'Pedro, Santiago y Juan', 'Elías el Profeta'], answer: 'Juan el Bautista' },
+            { type: 'question', question: 'El diezmo es dar el... de nuestros ingresos al Señor.', options: ['5%', '10%', '15%'], answer: '10%' },
+            { type: 'question', question: '¿Cuál de estos tres reinos de gloria se compara con la gloria de las estrellas?', options: ['Celestial', 'Terrestre', 'Telestial'], answer: 'Telestial' },
+            { type: 'rest', name: 'Amigos', question: 'Los buenos amigos se apoyan mutuamente en el camino del convenio.' },
+            { type: 'question', question: '¿Qué profeta guió a los pioneros a través de las llanuras hasta el Valle de Lago Salado?', options: ['José Smith', 'Brigham Young', 'John Taylor'], answer: 'Brigham Young' },
+            { type: 'question', question: '¿Cuál es el lema de la Primaria?', options: ['Soy un hijo de Dios', 'Todas las cosas testifican de Cristo', 'El Sacerdocio es el poder de Dios'], answer: 'Todas las cosas testifican de Cristo'},
+            { type: 'milestone', name: 'Misión', question: 'Compartes el Evangelio con otros. "Id por todo el mundo y predicad el evangelio a toda criatura."' },
+            { type: 'question', question: '¿Cómo se llama el profeta actual de la Iglesia?', options: ['Thomas S. Monson', 'Gordon B. Hinckley', 'Russell M. Nelson'], answer: 'Russell M. Nelson' },
+            { type: 'question', question: '¿Cuál es el propósito principal de la Sociedad de Socorro?', options: ['Aumentar la fe y la rectitud personal', 'Fortalecer a las familias y los hogares', 'Ambas son correctas'], answer: 'Ambas son correctas' },
+            { type: 'rest', name: 'Servicio', question: 'Al servir a tus semejantes, sirves a Dios. ¡Toma un merecido descanso!' },
+            { type: 'question', question: '¿Qué llaves del sacerdocio restauró Elías el Profeta en el Templo de Kirtland?', options: ['Las llaves del recogimiento de Israel', 'Las llaves de la dispensación del evangelio de Abraham', 'Las llaves para sellar'], answer: 'Las llaves para sellar' },
+            { type: 'question', question: 'Según D. y C. 19:16-19, ¿el sufrimiento de quién nos permite arrepentirnos y no tener que padecer?', options: ['Adán', 'Moisés', 'Jesucristo'], answer: 'Jesucristo'},
+            { type: 'milestone', name: 'Templo', question: 'Haces convenios sagrados que te preparan para la exaltación.' },
+            { type: 'question', question: '¿Qué es la investidura que se recibe en el templo?', options: ['Un regalo de conocimiento y poder de Dios', 'Una ceremonia de matrimonio', 'El bautismo por los muertos'], answer: 'Un regalo de conocimiento y poder de Dios'},
+            { type: 'question', question: 'Según el Artículo de Fe 1, ¿en quién creemos?', options: ['En Dios el Padre, su Hijo Jesucristo y en el Espíritu Santo', 'Solo en Jesucristo', 'En los profetas'], answer: 'En Dios el Padre, su Hijo Jesucristo y en el Espíritu Santo' },
+            { type: 'question', question: '¿Qué profeta dedicó el Templo de Kirtland en 1836?', options: ['José Smith', 'Brigham Young', 'Heber C. Kimball'], answer: 'José Smith'},
+            { type: 'question', question: '¿Qué significa la palabra "Expiación"?', options: ['Pagar una deuda por otra persona', 'Sufrir por los pecados y vencer la muerte', 'Ambas son correctas'], answer: 'Ambas son correctas' },
+            { type: 'milestone', name: 'Vida Eterna', question: '¡Felicidades! Has perseverado hasta el fin y has vuelto a la presencia de Dios.' },
+        ];
+
+        const board = document.getElementById('game-board');
+        const rollButton = document.getElementById('roll-button');
+        const restartButton = document.getElementById('restart-button');
+        const diceResult = document.getElementById('dice-result');
+        const eventCard = document.getElementById('event-card');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackText = document.getElementById('feedback-text');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const playerInfoList = document.getElementById('player-info-list');
+        const setupScreen = document.getElementById('setup-screen');
+        const playerInputs = document.getElementById('player-inputs');
+        const addPlayerButton = document.getElementById('add-player-button');
+        const startGameButton = document.getElementById('start-game-button');
+        
+        let players = [];
+        let currentPlayerIndex = 0;
+        let boardSpaces = [];
+
+        function addPlayerInput() {
+            if (playerInputs.children.length < 4) {
+                const newInput = document.createElement('input');
+                newInput.type = 'text';
+                newInput.placeholder = `Nombre Jugador ${playerInputs.children.length + 1}`;
+                newInput.value = `Jugador ${playerInputs.children.length + 1}`;
+                playerInputs.appendChild(newInput);
+            }
+            if (playerInputs.children.length === 4) {
+                addPlayerButton.disabled = true;
+            }
+        }
+
+        function startGame() {
+            const inputs = playerInputs.querySelectorAll('input');
+            players = [];
+            inputs.forEach((input, index) => {
+                if (input.value.trim() !== '') {
+                    players.push({
+                        id: index,
+                        name: input.value.trim(),
+                        position: 0,
+                        color: `var(--player-${index + 1}-color)`
+                    });
+                }
+            });
+
+            if (players.length < 2) {
+                alert('Necesitas al menos 2 jugadores para empezar.');
+                return;
+            }
+
+            setupScreen.classList.add('hidden');
+            initGame();
+        }
+
+        function setupBoard() {
+            board.innerHTML = '';
+            boardSpaces = [];
+            
+            const numSpaces = gameData.length;
+            for (let i = 0; i < numSpaces; i++) {
+                const space = document.createElement('div');
+                space.classList.add('board-space');
+                space.textContent = gameData[i].name || `?`;
+                if (gameData[i].type === 'milestone') space.classList.add('milestone');
+                
+                const row = Math.floor(i / (Math.ceil(numSpaces / 3)));
+                let col = i % (Math.ceil(numSpaces / 3));
+                if (row % 2 !== 0) col = (Math.ceil(numSpaces / 3)) - 1 - col;
+
+                space.style.top = `${(row * 35) + 15}%`;
+                space.style.left = `${(col * (100 / (Math.ceil(numSpaces / 3)))) + 5}%`;
+                board.appendChild(space);
+                boardSpaces.push(space);
+            }
+
+            players.forEach(player => {
+                const playerToken = document.createElement('div');
+                playerToken.id = `player-token-${player.id}`;
+                playerToken.className = 'player-token';
+                playerToken.style.backgroundColor = player.color;
+                board.appendChild(playerToken);
+            });
+        }
+
+        function renderPlayerInfo() {
+            playerInfoList.innerHTML = '';
+            players.forEach(player => {
+                const li = document.createElement('li');
+                if (player.id === currentPlayerIndex) li.classList.add('active');
+                
+                const spaceName = gameData[player.position].name || 'Pregunta';
+
+                li.innerHTML = `
+                    <div class="token-icon" style="background-color: ${player.color};"></div>
+                    <span class="player-name">${player.name}</span>
+                    <span class="player-pos">Casilla ${player.position + 1}</span>
+                `;
+                playerInfoList.appendChild(li);
+            });
+        }
+
+        function updatePlayerPosition(playerIndex) {
+            const player = players[playerIndex];
+            if (!boardSpaces[player.position]) return;
+            
+            const spaceElement = boardSpaces[player.position];
+            const playerToken = document.getElementById(`player-token-${player.id}`);
+            
+            const playersOnSameSpace = players.filter(p => p.position === player.position);
+            const playerIndexOnSpace = playersOnSameSpace.findIndex(p => p.id === player.id);
+            const offset = (playerIndexOnSpace - (playersOnSameSpace.length - 1) / 2) * 15;
+
+            playerToken.style.left = `calc(${spaceElement.style.left} + 18px + ${offset}px)`;
+            playerToken.style.top = `calc(${spaceElement.style.top} + 18px)`;
+        }
+
+        function rollDice() {
+            rollButton.disabled = true;
+            const roll = Math.floor(Math.random() * 3) + 1;
+            diceResult.textContent = `Avanzas ${roll} casillas`;
+
+            const player = players[currentPlayerIndex];
+            let newPosition = Math.min(player.position + roll, gameData.length - 1);
+            
+            let current = player.position;
+            const interval = setInterval(() => {
+                if (current < newPosition) {
+                    current++;
+                    player.position = current;
+                    updatePlayerPosition(currentPlayerIndex);
+                    renderPlayerInfo();
+                } else {
+                    clearInterval(interval);
+                    setTimeout(() => triggerEvent(player.position), 500);
+                }
+            }, 400);
+        }
+        
+        function triggerEvent(position) {
+            const eventData = gameData[position];
+            feedbackText.textContent = '';
+            optionsContainer.innerHTML = '';
+            
+            questionText.textContent = `Turno de ${players[currentPlayerIndex].name}: ${eventData.question}`;
+            
+            if (eventData.type === 'question') {
+                eventData.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.onclick = () => checkAnswer(button, option, eventData.answer);
+                    optionsContainer.appendChild(button);
+                });
+            } else {
+                const okButton = document.createElement('button');
+                okButton.textContent = 'Continuar';
+                okButton.onclick = () => nextTurn();
+                optionsContainer.appendChild(okButton);
+            }
+
+            if (position === gameData.length - 1) {
+                const winner = players[currentPlayerIndex];
+                feedbackText.textContent = `¡${winner.name} ha ganado el juego!`;
+                rollButton.classList.add('hidden');
+                restartButton.classList.remove('hidden');
+            }
+            
+            eventCard.classList.remove('hidden');
+        }
+
+        function checkAnswer(button, selected, correct) {
+            const buttons = optionsContainer.querySelectorAll('button');
+            buttons.forEach(btn => btn.disabled = true);
+
+            if (selected === correct) {
+                button.classList.add('correct');
+                feedbackText.textContent = '¡Correcto!';
+                feedbackText.style.color = '#27ae60';
+                setTimeout(nextTurn, 1500);
+            } else {
+                button.classList.add('incorrect');
+                feedbackText.textContent = 'Incorrecto. Pierdes un turno.';
+                feedbackText.style.color = '#e74c3c';
+                setTimeout(nextTurn, 2000);
+            }
+        }
+
+        function nextTurn() {
+            eventCard.classList.add('hidden');
+            
+            if (players[currentPlayerIndex].position === gameData.length - 1) {
+                return; 
+            }
+
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+            renderPlayerInfo();
+            rollButton.disabled = false;
+            diceResult.textContent = '';
+            welcomeMessage.textContent = `Es el turno de ${players[currentPlayerIndex].name}.`;
+        }
+
+        function initGame() {
+            currentPlayerIndex = 0;
+            setupBoard();
+            players.forEach((p, index) => {
+                p.position = 0;
+                updatePlayerPosition(index);
+            });
+            renderPlayerInfo();
+            rollButton.disabled = false;
+            rollButton.classList.remove('hidden');
+            restartButton.classList.add('hidden');
+            diceResult.textContent = '';
+            welcomeMessage.textContent = `¡Bienvenido! Es el turno de ${players[0].name}.`;
+        }
+
+        addPlayerButton.addEventListener('click', addPlayerInput);
+        startGameButton.addEventListener('click', startGame);
+        rollButton.addEventListener('click', rollDice);
+        restartButton.addEventListener('click', () => {
+             setupScreen.classList.remove('hidden');
+        });
+        window.addEventListener('resize', () => {
+            players.forEach((p, index) => updatePlayerPosition(index));
+        });
+    });
+    </script>
+</body>
+</html>
+
